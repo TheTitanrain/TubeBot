@@ -22,7 +22,7 @@ else:
   <code>pip install pyTelegramBotAPI</code>  
   * ffmpeg:  
   http://ffmpeg.org/download.html  
-  Copy ffmpeg.exe to script directory.  
+  Copy ffmpeg.exe to bot directory.  
   * pytube  
   https://github.com/nficano/pytube/archive/master.zip  
   <code>python \pytube-master\setup.py install</code>
