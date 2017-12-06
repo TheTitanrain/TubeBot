@@ -5,7 +5,7 @@ Telegram bot for download audio from youtube video.
 ### How do I get set up? ###
 
 * Configuration:  
-Config.py  
+File Config.py:  
 DEBUG_ = True # for debug - true, for production - false  
 if DEBUG_:  
     token = '' # debug bot token  
