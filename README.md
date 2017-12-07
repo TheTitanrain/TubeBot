@@ -1,6 +1,6 @@
 # TubeBot
 
-Telegram bot for download audio from youtube video.
+Telegram bot for download audio from youtube video. Original: https://bitbucket.org/SlavikMIPT/audiotubebotos
 
 ### How do I get set up? ###
 
