@@ -271,10 +271,10 @@ def set_video_download_flag(message):
         us_get_video = usettings_.get(str(chat_id),'get_video')
         keyboard = types.InlineKeyboardMarkup()
         if us_get_video == 'True':
-            get_video_button = types.InlineKeyboardButton(text="Отключить", callback_data=('get_video=False'))
+            get_video_button = types.InlineKeyboardButton(text="Отключить", callback_data='get_video=False')
             text_get_video = u'Загрузка видео (до 50Мб): *Включена*'
         else:
-            get_video_button = types.InlineKeyboardButton(text="Включить", callback_data=('get_video=True'))
+            get_video_button = types.InlineKeyboardButton(text="Включить", callback_data='get_video=True')
             text_get_video = u'Загрузка видео (до 50Мб): *Отключена*'
         keyboard.add(get_video_button)
         bot.send_message(message.chat.id,parse_mode='Markdown',text = text_get_video ,reply_markup=keyboard)
@@ -293,18 +293,18 @@ def set_sound_quality(message):
         usettings_.read(path_home + usettings_filename_)
         if not usettings_.has_section(str(chat_id)):
             usettings_.add_section(str(chat_id))
-            usettings_.set(str(chat_id),'bitrate','192k')
+            usettings_.set(str(chat_id), 'bitrate', '192k')
             usf = open(str(path_home + usettings_filename_), 'w')
             usettings_.write(usf)
             usf.close()
         thread_lock.release()
-        us_bitrate = usettings_.get(str(chat_id),'bitrate')
+        us_bitrate = usettings_.get(str(chat_id), 'bitrate')
         keyboard = types.InlineKeyboardMarkup()
-        button_320k = types.InlineKeyboardButton(text="320Кбит/с",callback_data=('bitrate=320k'))
-        button_192k = types.InlineKeyboardButton(text="192Кбит/с",callback_data=('bitrate=192k'),)
-        button_128k = types.InlineKeyboardButton(text="128Кбит/с", callback_data=('bitrate=128k'))
-        button_096k = types.InlineKeyboardButton(text="96Кбит/с", callback_data=('bitrate=096k'))
-        keyboard.add(button_096k,button_128k,button_192k,button_320k)
+        button_320k = types.InlineKeyboardButton(text="320Кбит/с", callback_data='bitrate=320k')
+        button_192k = types.InlineKeyboardButton(text="192Кбит/с", callback_data='bitrate=192k')
+        button_128k = types.InlineKeyboardButton(text="128Кбит/с", callback_data='bitrate=128k')
+        button_096k = types.InlineKeyboardButton(text="96Кбит/с", callback_data='bitrate=096k')
+        keyboard.add(button_096k, button_128k, button_192k, button_320k)
         if us_bitrate == '320k':
             text_bitrate = u'*320Кбит/с*'
         elif us_bitrate == '192k':
@@ -313,7 +313,10 @@ def set_sound_quality(message):
             text_bitrate = u'*128Кбит/с*'
         elif us_bitrate == '96k':
             text_bitrate = u'*96Кбит/с*'
-        bot.send_message(message.chat.id,parse_mode='Markdown',text = (u'Битрейт аудио по умолчанию: ' + text_bitrate) ,reply_markup=keyboard)
+        bot.send_message(message.chat.id,
+                         parse_mode='Markdown',
+                         text=u'Битрейт аудио по умолчанию: ' + text_bitrate,
+                         reply_markup=keyboard)
     except Exception as e:
         logging.error(str('set_sound_quality:') + str(e))
         thread_lock.release()
@@ -441,7 +444,7 @@ def send_podcast(message):  # Название функции не играет 
             download_progress.start()
             #YouTube(link).streams.first().download(output_path = str(path_home + tmpdir),filename = asciiFileName[:-4])
 
-            yt.streams.get_by_itag(18).download(output_path=str(path_home + tmpdir), filename=asciiFileName)
+            yt.streams.get_by_itag(18).download(output_path=str(path_home + tmpdir), filename=asciiFileName[:-4])
 
             if us_get_video == 'True' and (video_filesize/1024/1024 <= 50):
 
@@ -455,7 +458,7 @@ def send_podcast(message):  # Название функции не играет 
         except Exception as e:
             bot.edit_message_text(chat_id=chat_id,
                                   message_id=msg_wait.message_id,
-                                  text="Не удалось получить информацию о видео из-за ошибки:" + str(e))
+                                  text="Не удалось получить информацию о видео из-за ошибки: " + str(e))
             logging.error(e)
             os.chdir(path_home)
             if os.path.exists(tmpdir):
@@ -473,16 +476,24 @@ def send_podcast(message):  # Название функции не играет 
             sec_per_mb = 100
             if us_bitrate == '320k':
                 max_pduration = 1200
-                bot.edit_message_text(chat_id=chat_id, message_id=msg_wait.message_id, text='Конвертирую аудио 320Кбит/с, ждите...')
+                bot.edit_message_text(chat_id=chat_id,
+                                      message_id=msg_wait.message_id,
+                                      text='Конвертирую аудио 320Кбит/с, ждите...')
             elif us_bitrate == '192k':
                 max_pduration = 1800
-                bot.edit_message_text(chat_id=chat_id, message_id=msg_wait.message_id,text='Конвертирую аудио 192Кбит/с, ждите...')
+                bot.edit_message_text(chat_id=chat_id,
+                                      message_id=msg_wait.message_id,
+                                      text='Конвертирую аудио 192Кбит/с, ждите...')
             elif us_bitrate == '128k':
                 max_pduration = 2400
-                bot.edit_message_text(chat_id=chat_id, message_id=msg_wait.message_id,text='Конвертирую аудио 128Кбит/с, ждите...')
+                bot.edit_message_text(chat_id=chat_id,
+                                      message_id=msg_wait.message_id,
+                                      text='Конвертирую аудио 128Кбит/с, ждите...')
             elif us_bitrate == '96k':
                 max_pduration = 3000
-                bot.edit_message_text(chat_id=chat_id, message_id=msg_wait.message_id,text='Конвертирую аудио 96Кбит/с, ждите...')
+                bot.edit_message_text(chat_id=chat_id,
+                                      message_id=msg_wait.message_id,
+                                      text='Конвертирую аудио 96Кбит/с, ждите...')
             else:
                 max_pduration = 1800
             sec_per_mb = max_pduration / 30
@@ -490,30 +501,31 @@ def send_podcast(message):  # Название функции не играет 
             path_file_mp3 = path_file[:-4] + '.mp3'
             print(duration, parts)
             for pn in range(parts):
-                if ((pn + 1)* max_pduration > duration):
+                if (pn + 1) * max_pduration > duration:
                     pduration = duration - pn * max_pduration
                     piece = audio.subclip(pn * max_pduration, duration)
                 else:
-                    piece = audio.subclip(pn * max_pduration, (pn + 1)* max_pduration)
+                    piece = audio.subclip(pn * max_pduration, (pn + 1) * max_pduration)
                     pduration = max_pduration
-                if (parts > 1):
-                    piece.write_audiofile(path_file[:-4]+'_'+str(pn+1) + '_of_' + str(parts) +'.mp3',
+
+                if parts > 1:
+                    piece.write_audiofile(path_file[:-4]+'_'+str(pn+1) + '_of_' + str(parts) + '.mp3',
                                           bitrate=us_bitrate)
-                    f = open(str(path_file[:-4]+'_'+str(pn+1)+ '_of_' + str(parts) +'.mp3'), 'rb')
-                    msg = bot.send_audio(message.chat.id,
-                                         f,
-                                         title=video_title + '_' +str(pn+1) + '/' + str(parts),
-                                         duration=pduration)
+                    f = open(str(path_file[:-4] + '_'+str(pn+1) + '_of_' + str(parts) + '.mp3'), 'rb')
+                    bot.send_audio(message.chat.id,
+                                   f,
+                                   title=video_title + '_' + str(pn+1) + '/' + str(parts),
+                                   duration=pduration)
                 else:
                     encode_progress = ProgressAudio(tmpdir, msg_wait, int(pduration / sec_per_mb), path_file_mp3)
                     encode_progress.start()
                     piece.write_audiofile(path_file_mp3, bitrate=us_bitrate)
                     encode_progress.enable = False
                     f = open(path_file_mp3, 'rb')
-                    msg = bot.send_audio(message.chat.id,
-                                         f,
-                                         title=video_title,
-                                         duration = pduration)
+                    bot.send_audio(message.chat.id,
+                                   f,
+                                   title=video_title,
+                                   duration = pduration)
 
                 f.close()
             #fv = open(str(path_file),'rb')
@@ -576,9 +588,9 @@ def send_podcast(message):  # Название функции не играет 
                                   message_id=msg_wait.message_id,
                                   text='Таймкод начала превышает длительность видео')
         os.chdir(path_home)
+        close_clip(clip)
         if os.path.exists(tmpdir):
             shutil.rmtree(tmpdir)
-        close_clip(clip)
 
 
 if __name__ == '__main__':
