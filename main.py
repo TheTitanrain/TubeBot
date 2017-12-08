@@ -3,25 +3,18 @@ import config
 import telebot
 from telebot import types
 import botan
-# from telebot import apihelper
-# from os.path import join, getsize
 import os
-# import fnmatch
-# import eventlet
-# import requests
 import logging
 from configparser import ConfigParser
 from moviepy.editor import *
 from pytube import YouTube
 from time import sleep
-# import time
-# from transliterate import translit, get_available_language_codes
 import shutil
 from threading import Thread
 from threading import Lock
-# import string
 import sys
 from urllib.parse import urlparse
+import re
 
 bot = telebot.TeleBot(config.token)
 thread_lock = Lock()
@@ -40,9 +33,18 @@ def correct_link(link):
         if parseurl.path == '':
             return False
         else:
-            return True
+            return regex_search(r'(?:v=|\/)([0-9A-Za-z_-]{11}).*', link)
     else:
         return False
+
+
+def regex_search(pattern, string):
+    regex = re.compile(pattern, 0)
+    results = regex.search(string)
+    if not results:
+        return False
+    else:
+        return True
 
 
 def close_clip(clip):
