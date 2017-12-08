@@ -21,6 +21,7 @@ from threading import Thread
 from threading import Lock
 # import string
 import sys
+from urllib.parse import urlparse
 
 bot = telebot.TeleBot(config.token)
 thread_lock = Lock()
@@ -34,8 +35,12 @@ path_usettings_ = path_home + usettings_filename_
 
 
 def correct_link(link):
-    if link.find(u'youtube.com') != -1 or link.find(u'youtu.be') != -1:
-        return True
+    parseurl = urlparse(link)
+    if parseurl.netloc == 'youtube.com' or parseurl.netloc == 'youtu.be' or parseurl.netloc == 'www.youtube.com':
+        if parseurl.path == '':
+            return False
+        else:
+            return True
     else:
         return False
 
@@ -44,13 +49,13 @@ def close_clip(clip):
     try:
         clip.reader.close()
         del clip.reader
-        if clip.audio != None:
+        if clip.audio is not None:
             clip.audio.reader.close_proc()
             del clip.audio
         del clip
     except Exception as e:
         print(e)
-        #sys.exc_clear()
+        # sys.exc_clear()
 
 
 class ProgressBar(Thread):
