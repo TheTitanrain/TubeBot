@@ -27,7 +27,7 @@ usettings_filename_ = 'users_settings.conf'
 path_usettings_ = path_home + usettings_filename_
 
 
-def correct_link(link):
+def check_get_link(link):
     parseurl = urlparse(link)
     if parseurl.netloc == 'youtube.com' or parseurl.netloc == 'youtu.be' or parseurl.netloc == 'www.youtube.com':
         if parseurl.path == '':
@@ -40,11 +40,11 @@ def correct_link(link):
 
 def regex_search(pattern, string):
     regex = re.compile(pattern, 0)
-    results = regex.search(string)
-    if not results:
-        return False
+    result = regex.search(string)
+    if not result:
+        return False, ''
     else:
-        return True
+        return True, result[1]
 
 
 def close_clip(clip):
@@ -67,6 +67,7 @@ class ProgressBar(Thread):
         self.message = message
         self.file_size = file_size
         self.file_handle = file_handle
+
     def run(self):
         show_progress(self.message, self.file_size, self.file_handle)
         msg = "%s is running" % self.name
@@ -88,7 +89,7 @@ def show_progress(message, file_size, file_handle):
                                   message_id=message.message_id)
             bot.send_chat_action(message.chat.id, 'record_video')
         except Exception as e:
-            print (e)
+            print(e)
         sleep(0.5)
         bytes_received = os.path.getsize(file_handle)
     return
@@ -113,7 +114,7 @@ class ProgressAudio(Thread):
         # show_progress_audio(self.message,self.file_size,self.file_handle)
 
 
-def show_progress_audio(message,file_size,file_handle):
+def show_progress_audio(message, file_size, file_handle):
     # timeout = 100
     # while (not os.path.exists(file_handle)) and (timeout > 0):
     #     sleep(0.2)
@@ -126,14 +127,14 @@ def show_progress_audio(message,file_size,file_handle):
             # percent = int(100 * bytes_received / file_size)
             # bot.edit_message_text(text=(('Конвертирую аудио, ждите ') + str(percent) + '%'),chat_id=message.chat.id, message_id=message.message_id)
             bot.send_chat_action(message.chat.id, 'record_audio')
-            sleep(0.5)
+            sleep(1)
             # bytes_received = os.path.getsize(file_handle)
         except Exception as e:
             logging.error(e)
     return
 
 
-class processMessage(Thread):
+class ProcessMessage(Thread):
     def __init__(self, name, message):
         Thread.__init__(self)
         self.name = name
@@ -142,11 +143,14 @@ class processMessage(Thread):
         send_podcast(self.message)
         msg = "%s is running" % self.name
         print(msg)
+
+
 class ProcessCall(Thread):
     def __init__(self, name, call):
         Thread.__init__(self)
         self.name = name
         self.call = call
+
     def run(self):
         callback_button(self.call)
         msg = "%s is running" % self.name
@@ -361,15 +365,11 @@ def send_startup_message(message):
 @bot.message_handler(content_types=["text"])
 def create_threads(message):
     name = "Thread #%s" % (message.message_id)
-    my_thread = processMessage(name,message)
+    my_thread = ProcessMessage(name, message)
     my_thread.start()
 
 
-def send_podcast(message):  # Название функции не играет никакой роли, в принципе
-    link = message.text
-    logging.info('{!s}'.format(str(message.chat.id) + ' ' + link))
-    chat_id = message.chat.id
-    #read settings
+def read_settings(chat_id):
     try:
         thread_lock.acquire()
         usettings_.read(path_home + usettings_filename_)
@@ -385,36 +385,27 @@ def send_podcast(message):  # Название функции не играет 
         if not usettings_.has_option(str(chat_id), 'bitrate'):
             usettings_.set(str(chat_id), 'bitrate', '192k')
         thread_lock.release()
+        return usettings_.get(str(chat_id), 'bitrate'), usettings_.get(str(chat_id), 'get_video')
+
     except Exception as e:
         logging.error(str('send_podcast:') + str(e))
         thread_lock.release()
-    us_bitrate = usettings_.get(str(chat_id), 'bitrate')
-    us_get_video = usettings_.get(str(chat_id), 'get_video')
-    #read settings end
+
+
+def send_podcast(message):
+    link = message.text
+    logging.info('{!s}'.format(str(message.chat.id) + ' ' + link))
+    chat_id = message.chat.id
+    us_bitrate, us_get_video = read_settings(chat_id)
+
     if not config.DEBUG_:
         botan.track(config.botan_key, message.chat.id, message, 'convert')
-    if correct_link(link):
-        if link.find(u'youtu.be') != -1:
-            tmpdir = link[link.find('be') + 3:]
-        elif link.find('v=') != -1:
-            tmpdir = link[link.find('v=') + 2:]
-        elif link.find('embed') != -1:
-            tmpdir = link[link.find('embed') + 6:]
-        if tmpdir.find('?t=') != -1:
-            cut_start = tmpdir[tmpdir.find('?t=') + 3:]
-            cut_start = cut_start[:cut_start.find('s')]
-            cut_start = int(cut_start)
-        elif tmpdir.find('&t=') != -1:
-            cut_start = tmpdir[tmpdir.find('&t=') + 3:]
-            cut_start = cut_start[:cut_start.find('s')]
-            cut_start = int(cut_start)
-        else:
-            cut_start = 0
-        for c in ['&', '?', '=']:
-            if tmpdir.find(c) != -1:
-                tmpdir = tmpdir[:tmpdir.find(c)]
 
-        tmpdir = tmpdir + str(message.chat.id) + str(message.message_id)
+    correct, videoid = check_get_link(link)
+    cut_start = 0
+
+    if correct:
+        tmpdir = str(videoid) + str(message.chat.id) + str(message.message_id)
 
         if not os.path.exists(tmpdir):
             os.mkdir(tmpdir)
@@ -459,9 +450,10 @@ def send_podcast(message):  # Название функции не играет 
                 msg = bot.send_document(chat_id, fv, caption=video_title)
                 fv.close()
             elif video_filesize/1024/1024 > 50:
-                bot.send_message(chat_id=chat_id, text="Размер файла превышает 50МБ разрешенные для ботов...")
+                bot.send_message(chat_id=chat_id, text="Размер файла превышает 50 МБ, разрешенные для ботов. \
+                Буду присылать по частям.")
             # YouTube(link,on_progress_callback = on_download_progress).streams.get_by_itag(18).download(output_path = str(path_home + tmpdir),filename = asciiFileName[:-4])
-            #YouTube(link).streams.get_by_itag(140).download(output_path = str(path_home + tmpdir),filename = asciiFileName[:-4])
+            # YouTube(link).streams.get_by_itag(140).download(output_path = str(path_home + tmpdir),filename = asciiFileName[:-4])
         except Exception as e:
             bot.edit_message_text(chat_id=chat_id,
                                   message_id=msg_wait.message_id,
@@ -532,7 +524,7 @@ def send_podcast(message):  # Название функции не играет 
                     bot.send_audio(message.chat.id,
                                    f,
                                    title=video_title,
-                                   duration = pduration)
+                                   duration=pduration)
 
                 f.close()
             #fv = open(str(path_file),'rb')
@@ -602,6 +594,7 @@ def send_podcast(message):  # Название функции не играет 
         bot.send_message(chat_id,
                          "Это некорректная ссылка на видео. Скопируйте ссылку с youtube и пришлите мне.",
                          reply_to_message_id=message.message_id)
+
 
 if __name__ == '__main__':
     # Избавляемся от спама в логах от библиотеки requests
