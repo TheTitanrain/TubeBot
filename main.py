@@ -596,7 +596,10 @@ def send_podcast(message):  # Название функции не играет 
         close_clip(clip)
         if os.path.exists(tmpdir):
             shutil.rmtree(tmpdir)
-
+    else:
+        bot.send_message(chat_id,
+                         "Это некорректная ссылка на видео. Скопируйте ссылку с youtube и пришлите мне.",
+                         reply_to_message_id=message.message_id)
 
 if __name__ == '__main__':
     # Избавляемся от спама в логах от библиотеки requests
