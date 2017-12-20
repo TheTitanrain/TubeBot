@@ -15,6 +15,7 @@ from threading import Lock
 import sys
 from urllib.parse import urlparse
 import re
+import string
 
 bot = telebot.TeleBot(config.token)
 thread_lock = Lock()
@@ -29,13 +30,38 @@ path_usettings_ = path_home + usettings_filename_
 
 def check_get_link(link):
     parseurl = urlparse(link)
-    if parseurl.netloc == 'youtube.com' or parseurl.netloc == 'youtu.be' or parseurl.netloc == 'www.youtube.com':
+    time_sec = 0
+    if parseurl.netloc == 'youtube.com' \
+            or parseurl.netloc == 'youtu.be' \
+            or parseurl.netloc == 'www.youtube.com' \
+            or parseurl.netloc == 'm.youtube.com':
+
+        if parseurl.query != '':  # проверяем наличие параметра обрезки видео по времени
+            if parseurl.query[0] == 't':
+                time_hms = parseurl.query[2:]
+                units = {'s': 0, 'm': 0, 'h': 0}
+                for unit in units:
+                    if unit in time_hms:
+                        unit_index = time_hms.index(unit)
+                        i = 1
+                        while time_hms[unit_index - i] in string.digits:
+                            units[unit] += int(time_hms[unit_index - i]) * 10**(i - 1)
+                            i += 1
+                h = units['h']
+                m = units['m']
+                s = units['s']
+                time_sec = int(h) * 60 * 60 + int(m) * 60 + int(s)
+
         if parseurl.path == '':
-            return False
+            return False, '', 0
         else:
-            return regex_search(r'(?:v=|\/)([0-9A-Za-z_-]{11}).*', link)
+            id = regex_search(r'(?:v=|\/)([0-9A-Za-z_-]{11}).*', link)
+            if id[0]:
+                return True, id[1], time_sec
+            else:
+                return False, id[1], time_sec
     else:
-        return False
+        return False, '', 0
 
 
 def regex_search(pattern, string):
@@ -159,8 +185,8 @@ class ProcessCall(Thread):
 
 @bot.callback_query_handler(func=lambda call: True)
 def create_callback_thread(call):
-    name = "Thread #%s" % (call.message.message_id)
-    call_thread = ProcessCall(name,call)
+    name = "Thread #%s" % call.message.message_id
+    call_thread = ProcessCall(name, call)
     call_thread.start()
 
 
@@ -230,7 +256,7 @@ def callback_button(call):
                 thread_lock.release()
                 bot.delete_message(call.message.chat.id, call.message.message_id)
                 if new_status == 'True':
-                    bot.answer_callback_query(call.id, text="Загрузка видео + аудио",show_alert=True)
+                    bot.answer_callback_query(call.id, text="Загрузка видео + аудио", show_alert=True)
                 else:
                     bot.answer_callback_query(call.id, text="Загрузка только аудио", show_alert=True)
             # elif data[:len('download_video=')] == 'download_video=':
@@ -271,7 +297,7 @@ def set_video_download_flag(message):
         usettings_.read(path_home + usettings_filename_)
         if not usettings_.has_section(str(chat_id)):
             usettings_.add_section(str(chat_id))
-            usettings_.set(str(chat_id),'bitrate','192k')
+            usettings_.set(str(chat_id), 'bitrate', '192k')
             usettings_.set(str(chat_id), 'get_video', 'False')
             usf = open(str(path_home + usettings_filename_), 'w')
             usettings_.write(usf)
@@ -279,7 +305,7 @@ def set_video_download_flag(message):
         if not usettings_.has_option(str(chat_id), 'get_video'):
             usettings_.set(str(chat_id), 'get_video', 'False')
         thread_lock.release()
-        us_get_video = usettings_.get(str(chat_id),'get_video')
+        us_get_video = usettings_.get(str(chat_id), 'get_video')
         keyboard = types.InlineKeyboardMarkup()
         if us_get_video == 'True':
             get_video_button = types.InlineKeyboardButton(text="Отключить", callback_data='get_video=False')
@@ -288,7 +314,7 @@ def set_video_download_flag(message):
             get_video_button = types.InlineKeyboardButton(text="Включить", callback_data='get_video=True')
             text_get_video = u'Загрузка видео (до 50Мб): *Отключена*'
         keyboard.add(get_video_button)
-        bot.send_message(message.chat.id,parse_mode='Markdown',text = text_get_video ,reply_markup=keyboard)
+        bot.send_message(message.chat.id,parse_mode='Markdown', text=text_get_video, reply_markup=keyboard)
     except Exception as e:
         logging.error(str('set_video_download_flag:') + str(e))
         thread_lock.release()
@@ -364,7 +390,8 @@ def send_startup_message(message):
 
 @bot.message_handler(content_types=["text"])
 def create_threads(message):
-    name = "Thread #%s" % (message.message_id)
+    print(message)
+    name = "Thread #%s" % message.message_id
     my_thread = ProcessMessage(name, message)
     my_thread.start()
 
@@ -393,6 +420,7 @@ def read_settings(chat_id):
 
 
 def send_podcast(message):
+    print(message.text)
     link = message.text
     logging.info('{!s}'.format(str(message.chat.id) + ' ' + link))
     chat_id = message.chat.id
@@ -401,15 +429,14 @@ def send_podcast(message):
     if not config.DEBUG_:
         botan.track(config.botan_key, message.chat.id, message, 'convert')
 
-    correct, videoid = check_get_link(link)
-    cut_start = 0
+    correct, video_id, cut_start = check_get_link(link)  # получаем информацию из ссылки на видео
 
     if correct:
-        tmpdir = str(videoid) + str(message.chat.id) + str(message.message_id)
+        tmpdir = str(video_id) + str(message.chat.id) + str(message.message_id)
 
         if not os.path.exists(tmpdir):
             os.mkdir(tmpdir)
-            #os.chdir(tmpdir)
+
         try:
             msg_wait = bot.send_message(chat_id,
                                         "Получаю информацию о видео...",
@@ -447,7 +474,7 @@ def send_podcast(message):
             if us_get_video == 'True' and (video_filesize/1024/1024 <= 50):
 
                 fv = open(str(path_file), 'rb')
-                msg = bot.send_document(chat_id, fv, caption=video_title)
+                bot.send_document(chat_id, fv, caption=video_title)
                 fv.close()
             elif video_filesize/1024/1024 > 50:
                 bot.send_message(chat_id=chat_id, text="Размер файла превышает 50 МБ, разрешенные для ботов. \
@@ -467,7 +494,7 @@ def send_podcast(message):
         clip = VideoFileClip(path_file)
         audio = clip.audio
         duration = int(clip.duration)
-        if cut_start < duration:
+        if cut_start <= duration:
             audio = audio.subclip(cut_start, duration)
             duration = audio.duration
             bot.send_chat_action(chat_id, 'record_audio')
@@ -588,8 +615,10 @@ def send_podcast(message):
                                   text='Таймкод начала превышает длительность видео')
         os.chdir(path_home)
         close_clip(clip)
+        sleep(5)
         if os.path.exists(tmpdir):
             shutil.rmtree(tmpdir)
+
     else:
         bot.send_message(chat_id,
                          "Это некорректная ссылка на видео. Скопируйте ссылку с youtube и пришлите мне.",
