@@ -1,0 +1,3 @@
+*Support bot*
+BTC: /donate\_btc
+ETH: /donate\_eth

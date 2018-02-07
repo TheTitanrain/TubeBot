@@ -1,0 +1,6 @@
+/bitrate - Choose audio bitrate.
+/codec - Choose audio codec.
+/donate - Donate information.
+/help - Information about commands.
+
+[Support - https://t.me/youtube_to_audio_converter_chat](https://t.me/youtube_to_audio_converter_chat)
