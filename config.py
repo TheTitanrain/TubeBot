@@ -1,9 +1,9 @@
 DEBUG_ = True
 #debug bot token
 if DEBUG_:
-    token = ''
+    token = '5279955835:AAEGpRIR67RaAclNmiDHCXmV_nPqpuk9fvE'
 else:
-    token = ''
-    botan_key = ''
+    token = '5279955835:AAEGpRIR67RaAclNmiDHCXmV_nPqpuk9fvE'
+    botan_key = '5279955835:AAEGpRIR67RaAclNmiDHCXmV_nPqpuk9fvE'
     # botan_key = ''
 
